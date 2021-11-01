@@ -39,6 +39,7 @@ class BuyCoursesPlugin extends Plugin
     const TABLE_COUPON_SERVICE = 'plugin_buycourses_coupon_rel_service';
     const TABLE_COUPON_SALE = 'plugin_buycourses_coupon_rel_sale';
     const TABLE_COUPON_SERVICE_SALE = 'plugin_buycourses_coupon_rel_service_sale';
+    const TABLE_STRIPE = 'plugin_buycourses_stripe_account';
     const PRODUCT_TYPE_COURSE = 1;
     const PRODUCT_TYPE_SESSION = 2;
     const PRODUCT_TYPE_SERVICE = 3;
@@ -46,6 +47,7 @@ class BuyCoursesPlugin extends Plugin
     const PAYMENT_TYPE_TRANSFER = 2;
     const PAYMENT_TYPE_CULQI = 3;
     const PAYMENT_TYPE_TPV_REDSYS = 4;
+    const PAYMENT_TYPE_STRIPE = 5;
     const PAYOUT_STATUS_CANCELED = 2;
     const PAYOUT_STATUS_PENDING = 0;
     const PAYOUT_STATUS_COMPLETED = 1;
@@ -104,6 +106,7 @@ class BuyCoursesPlugin extends Plugin
                 'tax_enable' => 'boolean',
                 'use_currency_symbol' => 'boolean',
                 'tpv_redsys_enable' => 'boolean',
+                'stripe_enable' => 'boolean',
             ]
         );
     }
@@ -127,7 +130,7 @@ class BuyCoursesPlugin extends Plugin
      */
     public function isEnabled($checkEnabled = false)
     {
-        return $this->get('paypal_enable') || $this->get('transfer_enable') || $this->get('culqi_enable');
+        return $this->get('paypal_enable') || $this->get('transfer_enable') || $this->get('culqi_enable') || $this->get('stripe_enable');
     }
 
     /**
@@ -155,6 +158,7 @@ class BuyCoursesPlugin extends Plugin
             self::TABLE_COUPON_SERVICE,
             self::TABLE_COUPON_SALE,
             self::TABLE_COUPON_SERVICE_SALE,
+            self::TABLE_STRIPE,
         ];
         $em = Database::getManager();
         $cn = $em->getConnection();
@@ -193,6 +197,7 @@ class BuyCoursesPlugin extends Plugin
             self::TABLE_COUPON_SERVICE,
             self::TABLE_COUPON_SALE,
             self::TABLE_COUPON_SERVICE_SALE,
+            self::TABLE_STRIPE,
         ];
 
         foreach ($tablesToBeDeleted as $tableToBeDeleted) {
@@ -412,6 +417,15 @@ class BuyCoursesPlugin extends Plugin
         )";
         Database::query($sql);
 
+        $table = self::TABLE_STRIPE;
+        $sql = "CREATE TABLE IF NOT EXISTS $table (
+            id int unsigned NOT NULL AUTO_INCREMENT,
+            account_id varchar(255) NOT NULL,
+            secret_key varchar(255) NOT NULL,
+            PRIMARY KEY (id)
+        )";
+        Database::query($sql);
+
         Display::addFlash(
             Display::return_message(
                 $this->get_lang('Updated'),
@@ -627,6 +641,40 @@ class BuyCoursesPlugin extends Plugin
                 'sandbox' => isset($params['sandbox']),
             ],
             ['id = ?' => 1]
+        );
+    }
+
+    /**
+     * Save Stripe configuration params.
+     *
+     * @param array $params
+     *
+     * @return int Rows affected. Otherwise return false
+     */
+    public function saveStripeParameters($params)
+    {
+        return Database::update(
+            Database::get_main_table(self::TABLE_STRIPE),
+            [
+                'account_id' => $params['account_id'],
+                'secret_key' => $params['secret_key'],
+            ],
+            ['id = ?' => 1]
+        );
+    }
+
+    /**
+     * Gets the stored Stripe params.
+     *
+     * @return array
+     */
+    public function getStripeParams()
+    {
+        return Database::select(
+            '*',
+            Database::get_main_table(self::TABLE_STRIPE),
+            ['id = ?' => 1],
+            'first'
         );
     }
 
@@ -1116,6 +1164,7 @@ class BuyCoursesPlugin extends Plugin
                     self::PAYMENT_TYPE_TRANSFER,
                     self::PAYMENT_TYPE_CULQI,
                     self::PAYMENT_TYPE_TPV_REDSYS,
+                    self::PAYMENT_TYPE_STRIPE,
                 ]
             )
         ) {
@@ -1412,6 +1461,7 @@ class BuyCoursesPlugin extends Plugin
             self::PAYMENT_TYPE_TRANSFER => $this->get_lang('BankTransfer'),
             self::PAYMENT_TYPE_CULQI => 'Culqi',
             self::PAYMENT_TYPE_TPV_REDSYS => $this->get_lang('TpvPayment'),
+            self::PAYMENT_TYPE_STRIPE => 'Stripe',
         ];
     }
 

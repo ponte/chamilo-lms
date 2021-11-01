@@ -500,6 +500,18 @@ if (false === $sm->tablesExist(BuyCoursesPlugin::TABLE_COUPON_SERVICE_SALE)) {
     $couponSaleTable->setPrimaryKey(['id']);
 }
 
+if (false === $sm->tablesExist(BuyCoursesPlugin::TABLE_STRIPE)) {
+    $tpvRedsysTable = $pluginSchema->createTable(BuyCoursesPlugin::TABLE_STRIPE);
+    $tpvRedsysTable->addColumn(
+        'id',
+        Types::INTEGER,
+        ['autoincrement' => true, 'unsigned' => true]
+    );
+    $tpvRedsysTable->addColumn('account_id', Types::STRING);
+    $tpvRedsysTable->addColumn('secret_key', Types::STRING);
+    $tpvRedsysTable->setPrimaryKey(['id']);
+}
+
 $queries = $pluginSchema->toSql($platform);
 
 foreach ($queries as $query) {
